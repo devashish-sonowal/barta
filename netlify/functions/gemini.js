@@ -1,4 +1,4 @@
-// Proxies "Say it" phrasing/translation requests to Gemini using a
+// Proxies Barta's phrasing/translation requests to Gemini using a
 // server-side key, so visitors never need a Gemini API key of their own.
 //
 // Setup: Netlify site -> Site settings -> Environment variables ->
