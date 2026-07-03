@@ -106,6 +106,27 @@
 
   .status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 18px; }
   .status.err { color: #c0392b; }
+
+  .hf-toggle {
+    display: block; width: 100%; margin: 0 0 20px; border: 1px solid var(--hair); cursor: pointer;
+    border-radius: 8px; padding: 10px; font: inherit; font-weight: 500; font-size: 13px;
+    color: var(--muted); background: var(--card);
+  }
+  .hf-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .hf-toggle.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+  .hf-caption {
+    min-height: 60px; font-size: 16px; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--hair); border-radius: 8px; padding: 14px; margin-bottom: 16px;
+  }
+  .hf-caption .placeholder { color: var(--faint); }
+
+  .hf-btn {
+    width: 100%; padding: 22px; border: none; border-radius: var(--radius); cursor: pointer;
+    font: inherit; font-weight: 600; font-size: 17px; color: #fff; background: var(--accent);
+  }
+  .hf-btn:disabled { opacity: .6; cursor: default; }
+  .hf-btn.busy { background: var(--muted); }
 </style>
 
 <div class="wrap">
@@ -146,7 +167,9 @@
     </label>
   </div>
 
-  <section class="panel hearing">
+  <button class="hf-toggle" id="hfToggle" type="button">🎧 Hands-free mode</button>
+
+  <section class="panel hearing" id="normalHearing">
     <p class="eyebrow">what you're hearing</p>
     <div class="row">
       <button class="mic" id="micBtn"><span class="dot"></span><span id="micLabel">Listen</span></button>
@@ -158,13 +181,21 @@
     <div class="heard-trans" id="trans"></div>
   </section>
 
-  <section class="panel turn">
+  <section class="panel turn" id="normalTurn">
     <p class="eyebrow">your turn</p>
     <textarea id="attempt" rows="2" placeholder="Say or type your rough attempt — half sentences, wrong tense, mixed languages all fine…"></textarea>
-    <p class="hint">The coach finishes the thought for you in three registers. You choose which to say.</p>
+    <p class="hint">Barta finishes the thought for you. You choose which to say.</p>
     <button class="go" id="goBtn">Get phrasings</button>
     <div class="status" id="status"></div>
     <div class="options" id="options"></div>
+  </section>
+
+  <section class="panel hf-panel" id="hfPanel" hidden>
+    <p class="eyebrow">hands-free — wear earphones</p>
+    <div class="hf-caption" id="hfCaption"><span class="placeholder">Listening…</span></div>
+    <button class="hf-btn" id="hfBtn" type="button">Suggest a response</button>
+    <p class="hint">Tap once they've finished talking. Barta speaks one suggestion into your earphones.</p>
+    <div class="status" id="hfStatus"></div>
   </section>
 </div>
 
@@ -314,4 +345,119 @@ Each "gloss" is a short translation of that reply into ${nativeSel.value}.`;
   $("goBtn").onclick = getPhrasings;
   heard.addEventListener("blur", translateHeard);
   heard.addEventListener("focus", () => { if (heard.querySelector(".placeholder")) heard.innerHTML = ""; });
+
+  // ============================================================
+  // Hands-free mode — earphones in, no reading, one button.
+  // Listens continuously; a single tap suggests one way to respond
+  // to whatever's been heard since the last tap, and speaks it.
+  // Assumes the reply plays through earphones, not the phone
+  // speaker — otherwise the mic hears Barta's own suggestion and
+  // mistakes it for new conversation.
+  // ============================================================
+  const hfToggle = $("hfToggle");
+  const hfPanel = $("hfPanel");
+  const hfCaption = $("hfCaption");
+  const hfBtn = $("hfBtn");
+  const hfStatusEl = $("hfStatus");
+  const normalHearing = $("normalHearing");
+  const normalTurn = $("normalTurn");
+
+  let handsFree = false;
+  let hfRec = null;
+  let hfBuffer = "";
+  let hfBusy = false;
+
+  function setHfStatus(msg) { hfStatusEl.textContent = msg || ""; }
+  function resetHfCaption() { hfCaption.innerHTML = '<span class="placeholder">Listening…</span>'; }
+
+  function enterHandsFree() {
+    if (!SR) { setStatus("Hands-free needs Chrome's speech recognition.", true); return; }
+    listening && rec && rec.stop(); // don't run both listeners at once
+    handsFree = true;
+    hfToggle.textContent = "Exit hands-free";
+    hfToggle.classList.add("active");
+    normalHearing.hidden = true;
+    normalTurn.hidden = true;
+    hfPanel.hidden = false;
+    hfBuffer = "";
+    resetHfCaption();
+    startHfListening();
+  }
+
+  function exitHandsFree() {
+    handsFree = false;
+    hfToggle.textContent = "🎧 Hands-free mode";
+    hfToggle.classList.remove("active");
+    hfPanel.hidden = true;
+    normalHearing.hidden = false;
+    normalTurn.hidden = false;
+    hfRec && hfRec.stop();
+    setHfStatus("");
+  }
+
+  function startHfListening() {
+    if (!handsFree || hfBusy) return;
+    hfRec = new SR();
+    hfRec.lang = langSel.value;
+    hfRec.continuous = true;
+    hfRec.interimResults = true;
+    hfRec.onresult = (ev) => {
+      let t = "";
+      for (const r of ev.results) t += r[0].transcript;
+      hfBuffer = t;
+      hfCaption.textContent = t;
+    };
+    hfRec.onerror = () => {}; // onend fires next; restart handles it there
+    hfRec.onend = () => { if (handsFree && !hfBusy) startHfListening(); };
+    try { hfRec.start(); } catch {}
+  }
+
+  function speakAsync(text, lang) {
+    return new Promise((resolve) => {
+      if (!window.speechSynthesis) return resolve();
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.onend = resolve;
+      u.onerror = resolve;
+      speechSynthesis.speak(u);
+    });
+  }
+
+  async function suggestResponse() {
+    if (hfBusy) return;
+    const said = hfBuffer.trim();
+    if (!said) { setHfStatus("Still listening — wait for them to say something first."); return; }
+
+    hfBusy = true;
+    hfBtn.disabled = true;
+    hfBtn.classList.add("busy");
+    hfRec && hfRec.stop();
+    setHfStatus("thinking…");
+
+    try {
+      const instruction =
+`You are quietly prompting a language learner through an earpiece during a live conversation.
+Conversation language: ${langName()}.
+The other person just said: "${said}"
+Suggest ONE complete, natural way to respond, in ${langName()}, at a casual-but-polite register.
+Reply with ONLY the sentence to say — no quotes, no explanation, no alternatives.`;
+      const reply = (await callAI(instruction)).trim();
+      setHfStatus("speaking…");
+      await speakAsync(reply, langSel.value);
+      setHfStatus("");
+    } catch (e) {
+      setHfStatus(e.message || "Something went wrong. Try again.");
+    } finally {
+      hfBusy = false;
+      hfBtn.disabled = false;
+      hfBtn.classList.remove("busy");
+      hfBuffer = "";
+      resetHfCaption();
+      if (handsFree) startHfListening();
+    }
+  }
+
+  hfToggle.onclick = () => (handsFree ? exitHandsFree() : enterHandsFree());
+  hfBtn.onclick = suggestResponse;
 </script>
