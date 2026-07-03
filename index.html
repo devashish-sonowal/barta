@@ -1,0 +1,317 @@
+<!--
+  SAY IT — a live conversation coach for language learners who freeze mid-sentence.
+  Single-file web app. Free stack:
+    • Hearing the other person  -> Web Speech API (SpeechRecognition), free, built into Chrome
+    • Speaking options aloud     -> Web Speech API (speechSynthesis), free, built in
+    • Phrasing help + translation -> ONE AI call, isolated below in callAI()  <-- SWAP POINT
+
+  callAI() posts to /.netlify/functions/gemini — a server-side proxy that holds the
+  Gemini API key so visitors never need one of their own. Deploy: put this file plus
+  netlify/functions/gemini.js in a Netlify site, and set GEMINI_API_KEY under
+  Site settings -> Environment variables. See netlify/functions/gemini.js for details.
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Say it — conversation coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1f2933;
+    --paper: #f5f6f8;
+    --card: #ffffff;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --hair: #e2e8f0;
+    --accent: #0ea5a5;
+    --accent-bg: #e3f5f4;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 18px 60px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .word { font-weight: 600; font-size: 22px; letter-spacing: -0.2px; }
+  .tag { font-size: 12px; color: var(--faint); }
+
+  .langs { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 20px; }
+  .langs label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  select {
+    font: inherit; font-size: 14px; padding: 7px 9px; border: 1px solid var(--hair);
+    border-radius: 9px; background: var(--card); color: var(--ink); cursor: pointer;
+  }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--muted); margin: 0 0 10px;
+  }
+
+  .panel { background: var(--card); border: 1px solid var(--hair); border-radius: var(--radius); padding: 16px; }
+  .panel.turn { margin-top: 20px; }
+
+  .row { display: flex; gap: 10px; align-items: center; }
+  .mic {
+    border: 1px solid var(--hair); cursor: pointer; border-radius: 8px; padding: 8px 14px;
+    font: inherit; font-weight: 500; font-size: 14px; color: var(--ink); background: var(--card);
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  }
+  .mic .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .mic.live { border-color: var(--accent); color: var(--accent); }
+  .mic.live .dot { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .mic.live .dot { animation: none; } }
+
+  textarea, .heardbox {
+    width: 100%; font: inherit; font-size: 15px; border: 1px solid var(--hair);
+    border-radius: 8px; padding: 11px 12px; background: var(--paper); color: var(--ink); resize: vertical;
+  }
+  textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .heardbox { min-height: 46px; margin-top: 10px; }
+  .heard-trans { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .placeholder { color: var(--faint); }
+
+  .hint { font-size: 12px; color: var(--faint); margin: 8px 2px 0; }
+
+  .go {
+    margin-top: 12px; border: none; cursor: pointer; border-radius: 8px; width: 100%;
+    padding: 12px; font: inherit; font-weight: 600; font-size: 15px; color: #fff; background: var(--accent);
+  }
+  .go:disabled { opacity: .5; cursor: default; }
+
+  .options { display: grid; gap: 10px; margin-top: 18px; }
+  .opt { border: 1px solid var(--hair); border-radius: 8px; padding: 13px 14px; background: var(--card); }
+  .opt .reg {
+    font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-bg); padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .opt .text { font-size: 16px; font-weight: 500; margin: 9px 0 4px; }
+  .opt .gloss { font-size: 13px; color: var(--muted); }
+  .opt .acts { display: flex; gap: 8px; margin-top: 11px; }
+  .opt .acts button {
+    font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--hair);
+    background: var(--paper); color: var(--ink); border-radius: 6px; padding: 6px 11px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .opt .acts button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 18px; }
+  .status.err { color: #c0392b; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="word">Say it</div>
+    <div class="tag">for when you know the words but freeze</div>
+  </header>
+
+  <div class="langs">
+    <label>Conversation language
+      <select id="lang">
+        <option value="es-ES">Spanish</option>
+        <option value="fr-FR">French</option>
+        <option value="de-DE">German</option>
+        <option value="it-IT">Italian</option>
+        <option value="pt-BR">Portuguese</option>
+        <option value="en-US">English</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="ko-KR">Korean</option>
+        <option value="zh-CN">Mandarin</option>
+        <option value="nl-NL">Dutch</option>
+        <option value="ru-RU">Russian</option>
+        <option value="ar-SA">Arabic</option>
+        <option value="hi-IN">Hindi</option>
+      </select>
+    </label>
+    <label>Explain to me in
+      <select id="native">
+        <option value="English">English</option>
+        <option value="Spanish">Spanish</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Portuguese">Portuguese</option>
+        <option value="Arabic">Arabic</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Mandarin">Mandarin</option>
+      </select>
+    </label>
+  </div>
+
+  <section class="panel hearing">
+    <p class="eyebrow">what you're hearing</p>
+    <div class="row">
+      <button class="mic" id="micBtn"><span class="dot"></span><span id="micLabel">Listen</span></button>
+      <span class="hint" style="margin:0">or type what they said below</span>
+    </div>
+    <div class="heardbox" id="heard" contenteditable="true" role="textbox" aria-label="What the other person said">
+      <span class="placeholder">Their words appear here…</span>
+    </div>
+    <div class="heard-trans" id="trans"></div>
+  </section>
+
+  <section class="panel turn">
+    <p class="eyebrow">your turn</p>
+    <textarea id="attempt" rows="2" placeholder="Say or type your rough attempt — half sentences, wrong tense, mixed languages all fine…"></textarea>
+    <p class="hint">The coach finishes the thought for you in three registers. You choose which to say.</p>
+    <button class="go" id="goBtn">Get phrasings</button>
+    <div class="status" id="status"></div>
+    <div class="options" id="options"></div>
+  </section>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const langSel = $("lang"), nativeSel = $("native");
+  const heard = $("heard"), transEl = $("trans");
+  const attempt = $("attempt"), status = $("status"), optionsEl = $("options");
+
+  function langName(code) { return langSel.options[langSel.selectedIndex].text; }
+  function heardText() {
+    const t = heard.innerText.trim();
+    return t === "" || heard.querySelector(".placeholder") ? "" : t;
+  }
+  function setStatus(msg, err) { status.textContent = msg || ""; status.className = "status" + (err ? " err" : ""); }
+
+  /* ============================================================
+     SWAP POINT — the only piece tied to a specific AI provider.
+     Returns the model's text reply for a given instruction string.
+     Currently: a Netlify function (netlify/functions/gemini.js) that
+     holds the shared Gemini API key server-side, so visitors never
+     need one of their own.
+     ============================================================ */
+  async function callAI(instruction) {
+    const res = await fetch("/.netlify/functions/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instruction })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+    return data.text || "";
+  }
+  /* ==================== end swap point ==================== */
+
+  // Translate whatever we heard into the learner's native language.
+  async function translateHeard() {
+    const text = heardText();
+    if (!text) { transEl.textContent = ""; return; }
+    transEl.textContent = "translating…";
+    try {
+      const out = await callAI(
+        `Translate the following ${langName()} text into ${nativeSel.value}. ` +
+        `Reply with ONLY the translation, no quotes or preamble.\n\n"${text}"`
+      );
+      transEl.textContent = out.trim();
+    } catch (e) { transEl.textContent = "(couldn't translate: " + e.message + ")"; }
+  }
+
+  // The core feature: turn a rough attempt into three finished phrasings.
+  async function getPhrasings() {
+    const attemptText = attempt.value.trim();
+    if (!attemptText && !heardText()) { setStatus("Type your rough attempt first.", true); return; }
+
+    $("goBtn").disabled = true;
+    optionsEl.innerHTML = "";
+    setStatus("Thinking of a few ways to say it…");
+
+    const instruction =
+`You help a language learner who froze mid-sentence in a live conversation.
+Conversation language: ${langName()}. Explain glosses in: ${nativeSel.value}.
+The other person just said: "${heardText() || "(nothing captured)"}"
+The learner's rough attempt at a reply (may be broken, partial, wrong tense, or mixed languages): "${attemptText}"
+
+Write THREE complete, natural replies in ${langName()} at three registers:
+- "Simple": short, safe, easy words
+- "Natural": how a native speaker would casually say it
+- "Formal": polite / professional
+
+Return ONLY valid JSON, no markdown fences:
+{"options":[{"register":"Simple","text":"...","gloss":"..."},{"register":"Natural","text":"...","gloss":"..."},{"register":"Formal","text":"...","gloss":"..."}]}
+Each "gloss" is a short translation of that reply into ${nativeSel.value}.`;
+
+    try {
+      let raw = await callAI(instruction);
+      raw = raw.replace(/```json|```/g, "").trim();
+      const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+      if (start > -1 && end > -1) raw = raw.slice(start, end + 1);
+      const parsed = JSON.parse(raw);
+      renderOptions(parsed.options || []);
+      setStatus("");
+    } catch (e) {
+      setStatus(e.message || "Something went wrong reading the reply. Try again.", true);
+    } finally {
+      $("goBtn").disabled = false;
+    }
+  }
+
+  function renderOptions(options) {
+    optionsEl.innerHTML = "";
+    options.forEach((o) => {
+      const card = document.createElement("div");
+      card.className = "opt";
+      card.innerHTML =
+        `<span class="reg"></span>
+         <div class="text"></div>
+         <div class="gloss"></div>
+         <div class="acts">
+           <button class="speak">🔊 Say it aloud</button>
+           <button class="copy">Copy</button>
+         </div>`;
+      card.querySelector(".reg").textContent = o.register || "Option";
+      card.querySelector(".text").textContent = o.text || "";
+      card.querySelector(".gloss").textContent = o.gloss || "";
+      card.querySelector(".speak").onclick = () => speak(o.text);
+      card.querySelector(".copy").onclick = (ev) => {
+        navigator.clipboard?.writeText(o.text || "");
+        ev.target.textContent = "Copied";
+        setTimeout(() => (ev.target.textContent = "Copy"), 1200);
+      };
+      optionsEl.appendChild(card);
+    });
+  }
+
+  // Speak a phrasing aloud in the conversation language (free, built into the browser).
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = langSel.value;
+    speechSynthesis.speak(u);
+  }
+
+  // Live speech recognition for the incoming side (Chrome-based browsers).
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+  function toggleMic() {
+    if (!SR) { setStatus("Live listening needs Chrome. You can type what they said instead.", true); return; }
+    if (listening) { rec && rec.stop(); return; }
+    rec = new SR();
+    rec.lang = langSel.value;
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onstart = () => { listening = true; $("micBtn").classList.add("live"); $("micLabel").textContent = "Stop"; };
+    rec.onerror = (e) => { setStatus("Mic unavailable here (" + e.error + "). Type what they said instead.", true); };
+    rec.onend = () => { listening = false; $("micBtn").classList.remove("live"); $("micLabel").textContent = "Listen"; translateHeard(); };
+    rec.onresult = (ev) => {
+      let t = "";
+      for (const r of ev.results) t += r[0].transcript;
+      heard.innerHTML = "";
+      heard.textContent = t;
+    };
+    try { rec.start(); } catch { setStatus("Couldn't start the mic here. Type what they said instead.", true); }
+  }
+
+  $("micBtn").onclick = toggleMic;
+  $("goBtn").onclick = getPhrasings;
+  heard.addEventListener("blur", translateHeard);
+  heard.addEventListener("focus", () => { if (heard.querySelector(".placeholder")) heard.innerHTML = ""; });
+</script>
