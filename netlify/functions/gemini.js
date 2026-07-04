@@ -6,7 +6,7 @@
 // If Google renames/retires the model below, update GEMINI_MODEL to
 // whatever "flash" model is current at aistudio.google.com.
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3.5-flash";
 const MAX_INSTRUCTION_CHARS = 4000; // bounds the cost of a single request
 const MAX_OUTPUT_TOKENS = 1000;
 
