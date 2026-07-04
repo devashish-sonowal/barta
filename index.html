@@ -18,17 +18,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --ink: #111318;
-    --paper: #fafaf9;
+    --ink: #111111;
+    --paper: #fdfdf6;
     --card: #ffffff;
-    --muted: #5b6472;
-    --faint: #99a1ac;
-    --hair: #e7e8eb;
-    --accent: #0f766e;
-    --accent-bg: #e6f3f1;
-    --radius: 14px;
-    --shadow-sm: 0 1px 2px rgba(17,19,24,.05);
-    --shadow-md: 0 1px 2px rgba(17,19,24,.04), 0 10px 28px rgba(17,19,24,.07);
+    --yellow: #ffd84d;
+    --coral: #ff5a5f;
+    --blue: #4ea1ff;
+    --muted: #45484c;
+    --faint: #7a7d80;
+    --radius: 0;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
@@ -42,108 +40,122 @@
   }
   .wrap { max-width: 680px; margin: 0 auto; }
 
-  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 30px; }
-  .word { font-weight: 800; font-size: 38px; letter-spacing: -0.03em; line-height: 1; color: var(--ink); }
-  .tag { font-size: 13px; color: var(--faint); padding-bottom: 5px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+  .word {
+    display: inline-block; font-weight: 800; font-size: 32px; letter-spacing: -0.02em; line-height: 1;
+    color: var(--ink); background: var(--yellow); border: 3px solid var(--ink); padding: 8px 16px;
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .tag { font-size: 13px; font-weight: 600; color: var(--muted); }
 
-  .langs { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; }
-  .langs label { font-size: 12px; font-weight: 500; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+  .langs { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 26px; }
+  .langs label {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+    color: var(--ink); display: flex; flex-direction: column; gap: 7px;
+  }
   select {
     appearance: none; -webkit-appearance: none;
-    font: inherit; font-size: 14px; padding: 9px 34px 9px 13px;
-    border: 1px solid var(--hair); border-radius: 10px;
-    background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
-    color: var(--ink); cursor: pointer; box-shadow: var(--shadow-sm);
+    font: inherit; font-weight: 600; font-size: 14px; padding: 9px 34px 9px 13px;
+    border: 3px solid var(--ink); border-radius: var(--radius);
+    background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23111111' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+    color: var(--ink); cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
   }
 
   .eyebrow {
-    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
-    color: var(--muted); margin: 0 0 12px;
+    display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--ink); background: var(--card); border: 2px solid var(--ink); padding: 3px 10px; margin: 0 0 14px;
   }
 
   .panel {
-    background: var(--card); border: 1px solid var(--hair); border-radius: var(--radius);
-    padding: 22px; box-shadow: var(--shadow-md);
+    background: var(--card); border: 3px solid var(--ink); border-radius: var(--radius);
+    padding: 22px; box-shadow: 6px 6px 0 var(--ink);
   }
-  .panel.turn { margin-top: 22px; }
+  .panel.turn { margin-top: 32px; }
 
   .row { display: flex; gap: 10px; align-items: center; }
   .mic {
-    border: 1px solid var(--hair); cursor: pointer; border-radius: 9px; padding: 9px 15px;
-    font: inherit; font-weight: 500; font-size: 14px; color: var(--ink); background: var(--card);
+    border: 3px solid var(--ink); cursor: pointer; border-radius: var(--radius); padding: 9px 15px;
+    font: inherit; font-weight: 700; font-size: 14px; color: var(--ink); background: var(--card);
     display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-    box-shadow: var(--shadow-sm); transition: border-color .15s ease, color .15s ease;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .1s ease, box-shadow .1s ease;
   }
-  .mic .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
-  .mic.live { border-color: var(--accent); color: var(--accent); }
-  .mic.live .dot { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .mic .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); flex: none; }
+  .mic.live { background: var(--coral); }
+  .mic.live .dot { animation: pulse 1s ease-in-out infinite; }
+  .mic:active { transform: translate(3px, 3px); box-shadow: none; }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { .mic.live .dot { animation: none; } }
 
   textarea, .heardbox {
-    width: 100%; font: inherit; font-size: 15px; border: 1px solid var(--hair);
-    border-radius: 10px; padding: 12px 13px; background: var(--paper); color: var(--ink); resize: vertical;
+    width: 100%; font: inherit; font-size: 15px; border: 3px solid var(--ink);
+    border-radius: var(--radius); padding: 12px 13px; background: var(--paper); color: var(--ink); resize: vertical;
   }
-  textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea:focus, select:focus { outline: 3px solid var(--blue); outline-offset: 1px; }
   .heardbox { min-height: 46px; margin-top: 10px; }
-  .heard-trans { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  .heard-trans { font-size: 14px; font-weight: 600; color: var(--muted); margin-top: 8px; }
   .placeholder { color: var(--faint); }
 
-  .hint { font-size: 12px; color: var(--faint); margin: 9px 2px 0; }
+  .hint { font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 2px 0; }
 
   .go {
-    margin-top: 14px; border: none; cursor: pointer; border-radius: 10px; width: 100%;
-    padding: 13px; font: inherit; font-weight: 600; font-size: 15px; color: #fff; background: var(--accent);
-    box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
+    margin-top: 16px; border: 3px solid var(--ink); cursor: pointer; border-radius: var(--radius); width: 100%;
+    padding: 14px; font: inherit; font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: .3px;
+    color: var(--ink); background: var(--coral);
+    box-shadow: 5px 5px 0 var(--ink); transition: transform .1s ease, box-shadow .1s ease;
   }
-  .go:hover { box-shadow: 0 6px 16px rgba(15,118,110,.28); transform: translateY(-1px); }
-  .go:disabled { opacity: .5; cursor: default; transform: none; box-shadow: var(--shadow-sm); }
+  .go:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--ink); }
+  .go:active { transform: translate(4px, 4px); box-shadow: none; }
+  .go:disabled { opacity: .5; cursor: default; transform: none; box-shadow: 5px 5px 0 var(--ink); }
 
-  .options { display: grid; gap: 12px; margin-top: 20px; }
-  .opt { border: 1px solid var(--hair); border-radius: 12px; padding: 15px 16px; background: var(--card); box-shadow: var(--shadow-sm); }
+  .options { display: grid; gap: 14px; margin-top: 22px; }
+  .opt { border: 3px solid var(--ink); border-radius: var(--radius); padding: 15px 16px; background: var(--card); box-shadow: 4px 4px 0 var(--ink); }
   .opt .reg {
-    font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
-    color: var(--accent); background: var(--accent-bg); padding: 3px 9px; border-radius: 5px; display: inline-block;
+    font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); padding: 3px 9px; display: inline-block;
   }
-  .opt .text { font-size: 16px; font-weight: 500; margin: 10px 0 4px; }
-  .opt .gloss { font-size: 13px; color: var(--muted); }
+  .opt .text { font-size: 16px; font-weight: 700; margin: 10px 0 4px; }
+  .opt .gloss { font-size: 13px; font-weight: 500; color: var(--muted); }
   .opt .acts { display: flex; gap: 8px; margin-top: 12px; }
   .opt .acts button {
-    font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--hair);
-    background: var(--paper); color: var(--ink); border-radius: 7px; padding: 7px 12px;
-    display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s ease, color .15s ease;
+    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid var(--ink);
+    background: var(--paper); color: var(--ink); border-radius: var(--radius); padding: 7px 12px;
+    display: inline-flex; align-items: center; gap: 6px; transition: transform .1s ease, box-shadow .1s ease;
+    box-shadow: 2px 2px 0 var(--ink);
   }
-  .opt .acts button:hover { border-color: var(--accent); color: var(--accent); }
+  .opt .acts button:active { transform: translate(2px, 2px); box-shadow: none; }
   .opt .acts svg { width: 14px; height: 14px; }
 
-  .status { font-size: 13px; color: var(--muted); margin-top: 14px; min-height: 18px; }
+  .status { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 14px; min-height: 18px; }
   .status.err { color: #c0392b; }
 
   .hf-toggle {
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; margin: 0 0 22px; border: 1px solid var(--hair); cursor: pointer;
-    border-radius: 10px; padding: 11px; font: inherit; font-weight: 600; font-size: 13px;
-    color: var(--muted); background: var(--card); box-shadow: var(--shadow-sm);
-    transition: border-color .15s ease, color .15s ease;
+    width: 100%; margin: 0 0 24px; border: 3px solid var(--ink); cursor: pointer;
+    border-radius: var(--radius); padding: 12px; font: inherit; font-weight: 800; font-size: 13px;
+    text-transform: uppercase; letter-spacing: .3px;
+    color: var(--ink); background: var(--card); box-shadow: 4px 4px 0 var(--ink);
+    transition: transform .1s ease, box-shadow .1s ease;
   }
   .hf-toggle svg { width: 15px; height: 15px; }
-  .hf-toggle:hover { border-color: var(--accent); color: var(--accent); }
-  .hf-toggle.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .hf-toggle:active { transform: translate(4px, 4px); box-shadow: none; }
+  .hf-toggle.active { background: var(--blue); }
 
   .hf-caption {
-    min-height: 60px; font-size: 16px; color: var(--ink); background: var(--paper);
-    border: 1px solid var(--hair); border-radius: 10px; padding: 15px; margin-bottom: 18px;
+    min-height: 60px; font-size: 16px; font-weight: 600; color: var(--ink); background: var(--paper);
+    border: 3px solid var(--ink); border-radius: var(--radius); padding: 15px; margin-bottom: 18px;
   }
   .hf-caption .placeholder { color: var(--faint); }
 
   .hf-btn {
-    width: 100%; padding: 22px; border: none; border-radius: var(--radius); cursor: pointer;
-    font: inherit; font-weight: 600; font-size: 17px; color: #fff; background: var(--accent);
-    box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
+    width: 100%; padding: 22px; border: 3px solid var(--ink); border-radius: var(--radius); cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 17px; text-transform: uppercase; letter-spacing: .3px;
+    color: var(--ink); background: var(--coral);
+    box-shadow: 6px 6px 0 var(--ink); transition: transform .1s ease, box-shadow .1s ease;
   }
-  .hf-btn:hover:not(:disabled) { box-shadow: 0 6px 16px rgba(15,118,110,.28); transform: translateY(-1px); }
-  .hf-btn:disabled { opacity: .6; cursor: default; transform: none; }
-  .hf-btn.busy { background: var(--muted); }
+  .hf-btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 7px 7px 0 var(--ink); }
+  .hf-btn:active:not(:disabled) { transform: translate(5px, 5px); box-shadow: none; }
+  .hf-btn:disabled { opacity: .6; cursor: default; transform: none; box-shadow: 6px 6px 0 var(--ink); }
+  .hf-btn.busy { background: var(--card); }
 </style>
 
 <div class="wrap">
@@ -185,7 +197,7 @@
   </div>
 
   <button class="hf-toggle" id="hfToggle" type="button">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 14v4a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 14v4a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 14v4a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 14v4a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
     <span id="hfToggleLabel">Hands-free mode</span>
   </button>
 
@@ -314,7 +326,7 @@ Each "gloss" is a short translation of that reply into ${nativeSel.value}.`;
          <div class="text"></div>
          <div class="gloss"></div>
          <div class="acts">
-           <button class="speak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Say it aloud</button>
+           <button class="speak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Say it aloud</button>
            <button class="copy">Copy</button>
          </div>`;
       card.querySelector(".reg").textContent = o.register || "Option";
