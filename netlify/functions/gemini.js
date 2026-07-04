@@ -10,38 +10,9 @@ const GEMINI_MODEL = "gemini-2.0-flash";
 const MAX_INSTRUCTION_CHARS = 4000; // bounds the cost of a single request
 const MAX_OUTPUT_TOKENS = 1000;
 
-// Best-effort per-instance rate limit: a speed bump against a script
-// hammering this endpoint, not a hard guarantee — the map resets on
-// cold start and isn't shared across concurrent instances. If this
-// gets real traffic and real abuse, replace it with Netlify Blobs or
-// a small Redis (e.g. Upstash's free tier) for a limit that actually
-// holds across instances.
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 20;
-const hits = new Map(); // ip -> timestamps[]
-
-function rateLimited(ip) {
-  const now = Date.now();
-  const recent = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  return recent.length > MAX_PER_WINDOW;
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed." }) };
-  }
-
-  const ip =
-    event.headers["x-nf-client-connection-ip"] ||
-    event.headers["client-ip"] ||
-    "unknown";
-  if (rateLimited(ip)) {
-    return {
-      statusCode: 429,
-      body: JSON.stringify({ error: "Too many requests — wait a minute and try again." })
-    };
   }
 
   let instruction;
